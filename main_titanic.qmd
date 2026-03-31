@@ -4,23 +4,110 @@ format: html
 editor: visual
 ---
 
-## Quarto
+## Required Libraries & Resources
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+Install the libraries and load the dataset. (Adjust path to the .csv file)
 
 ```{r}
-1 + 1
+#install.packages("skimr")
+#install.packages("tidyverse")
+#install.packages("janitor")
+
+library(tidyverse)
+library(skimr)
+library(janitor)
+
+data_set <- read.csv("C:/Users/DZhem/Desktop/DA & PM/DA&PM Group Project/Titanic-Dataset.csv")
 ```
 
-You can add options to executable code like this
+View the first 20 entries.
 
 ```{r}
-#| echo: false
-2 * 2
+data_set <- clean_names(data_set)
+
+head(data_set)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Inspect the structure of the data set.
+
+```{r}
+dim(data_set)        # rows, columns
+str(data_set)        # structure
+```
+
+```{r}
+glimpse(data_set)    # tidy view
+```
+
+Data dictionary (additional info).
+
+```{r}
+skim(data_set)
+```
+
+We will use the data to analyze the factors that affected survival status among the passengers.
+
+survived (0 = No, 1 = Yes)
+
+Key Predictors: pclass, sex, age, sib_sp, parch, fare, embarked
+
+------------------------------------------------------------------------
+
+There are a lot of missing values in this dataset. No duplicates.
+
+```{r}
+cat("Missing values:\n\n")
+colSums(is.na(data_set))
+
+cat("\nNumber of duplicates:", sum(duplicated(data_set)), "\n")
+```
+
+Summary Statistics
+
+```{r}
+summary(data_set)
+
+data_set %>%
+  summarise(across(where(is.numeric),
+                   list(mean = mean, median = median, sd = sd),
+                   na.rm = TRUE))
+```
+
+Histograms
+
+```{r}
+ggplot(data_set, aes(x = age)) +
+  geom_histogram(bins = 30)
+
+ggplot(data_set, aes(x = fare)) +
+  geom_histogram(bins = 30)
+```
+
+Boxplots
+
+```{r}
+ggplot(data_set, aes(x = factor(survived), y = age)) +
+  geom_boxplot()
+
+ggplot(data_set, aes(x = factor(survived), y = fare)) +
+  geom_boxplot()
+```
+
+Outliers
+
+```{r}
+#Cap fare at 99th percentile
+outlier_less_ds <- data_set
+
+upper <- quantile(outlier_less_ds$fare, 0.99, na.rm = TRUE)
+
+outlier_less_ds$fare <- ifelse(outlier_less_ds$fare > upper, upper, outlier_less_ds$fare)
+
+
+#No more outliers
+ggplot(outlier_less_ds, aes(x = factor(survived), y = age)) +
+  geom_boxplot()
+
+ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
+  geom_boxplot()
+```
