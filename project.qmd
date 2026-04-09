@@ -154,3 +154,43 @@ ggplot(outlier_less_ds, aes(x = factor(survived), y = age)) +
 ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
   geom_boxplot()
 ```
+
+# ── WEEK 2-3: EDA, Visualization & Transformation ──────────
+
+## Univariate Analysis — Distribution of Key Variables
+
+```{r}
+library(tidyverse)
+library(ggcorrplot)
+
+# Age distribution
+ggplot(data_set, aes(x = age)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(title = "Distribution of Age", x = "Age", y = "Count") +
+  theme_minimal()
+
+# Fare distribution
+ggplot(data_set, aes(x = fare)) +
+  geom_histogram(bins = 30, fill = "tomato", color = "white") +
+  labs(title = "Distribution of Fare", x = "Fare", y = "Count") +
+  theme_minimal()
+
+# Survival count
+ggplot(data_set, aes(x = factor(survived))) +
+  geom_bar(fill = "mediumseagreen", color = "white") +
+  scale_x_discrete(labels = c("0" = "Died", "1" = "Survived")) +
+  labs(title = "Survival Count", x = "Survived", y = "Count") +
+  theme_minimal()
+
+# Passenger class
+ggplot(data_set, aes(x = factor(pclass))) +
+  geom_bar(fill = "mediumpurple", color = "white") +
+  labs(title = "Passenger Class Distribution", x = "Class", y = "Count") +
+  theme_minimal()
+
+# Sex distribution
+ggplot(data_set, aes(x = sex)) +
+  geom_bar(fill = "darkorange", color = "white") +
+  labs(title = "Sex Distribution", x = "Sex", y = "Count") +
+  theme_minimal()
+```
