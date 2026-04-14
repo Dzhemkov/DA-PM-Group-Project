@@ -111,3 +111,7 @@ ggplot(outlier_less_ds, aes(x = factor(survived), y = age)) +
 ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
   geom_boxplot()
 ```
+```{r}
+
+```
+
