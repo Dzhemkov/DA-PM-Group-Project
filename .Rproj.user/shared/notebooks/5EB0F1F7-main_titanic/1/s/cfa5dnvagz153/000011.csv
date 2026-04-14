@@ -1,3 +1,0 @@
-"0",""
-"0","ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +"
-"0","  geom_boxplot()"
