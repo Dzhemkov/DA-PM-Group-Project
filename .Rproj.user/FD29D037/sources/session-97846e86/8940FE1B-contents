@@ -112,30 +112,6 @@ ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
   geom_boxplot()
 ```
 
-Feature Engineering
-
 ```{r}
-# Create FamilySize
-data_set$FamilySize <- data_set$sib_sp + data_set$parch + 1
-
-# Create IsAlone (Initialize with 0, then set 1 where FamilySize is 1)
-data_set$IsAlone <- 0
-data_set$IsAlone[data_set$FamilySize == 1] <- 1
-
-data_set$Deck <- substr(data_set$cabin, 1, 1)
-data_set$Deck[is.na(data_set$Deck)] <- "Unkown"
-
-ticket_counts <- table(data_set$ticket)
-data_set$GroupSize <- ticket_counts[data_set$ticket]
-
-data_set$FareBin <- cut(data_set$fare, breaks=c(-Inf, 8, 15, 31, Inf), labels=c("Low", "Mid", "High", "Luxury"))
-
-view(data_set)
-
-# Bivariate Plot: Survival by FamilySize
-#ggplot(data_set, aes(x = FamilySize, fill = factor(Survived))) +
-#  geom_bar(position = "fill") +
-#  labs(y = "Survival Rate", title = "Survival Rate by Family Size") +
-#  theme_minimal()
 
 ```

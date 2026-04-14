@@ -1,0 +1,3 @@
+"0",""
+"0","ggplot(data_set, aes(x = fare)) +"
+"0","  geom_histogram(bins = 30)"
