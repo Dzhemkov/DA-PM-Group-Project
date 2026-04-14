@@ -1,0 +1,3 @@
+"0","data_set <- clean_names(data_set)"
+"0",""
+"0","head(data_set)"

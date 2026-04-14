@@ -1,0 +1,3 @@
+"0",""
+"0","ggplot(data_set, aes(x = factor(survived), y = fare)) +"
+"0","  geom_boxplot()"
