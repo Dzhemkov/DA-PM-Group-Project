@@ -1,2 +1,0 @@
-"0","ggplot(data_set, aes(x = factor(survived), y = age)) +"
-"0","  geom_boxplot()"
