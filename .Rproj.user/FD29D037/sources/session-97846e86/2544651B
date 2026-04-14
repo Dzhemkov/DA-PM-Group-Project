@@ -3,7 +3,7 @@
     "path": "C:/Users/DZhem/Desktop/DA & PM/DA&PM Group Project/main_titanic.qmd",
     "project_path": "main_titanic.qmd",
     "type": "quarto_markdown",
-    "hash": "3295124229",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1776181954942.0,
@@ -16,16 +16,16 @@
         "Source": "Source",
         "docOutlineVisible": "1",
         "rmdVisualCollapsedChunks": "",
-        "rmdVisualModeLocation": "2451:0",
+        "rmdVisualModeLocation": "2451:5392",
         "cursorPosition": "116,0",
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1776183197,
+    "lastKnownWriteTime": 1776183544,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1776183198024,
+    "last_content_update": 1776183544,
     "read_only": false,
     "read_only_alternatives": []
 }
