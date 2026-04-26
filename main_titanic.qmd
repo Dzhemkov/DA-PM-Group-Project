@@ -13,7 +13,7 @@ Install the libraries and load the dataset. (Adjust path to the .csv file)
 #install.packages("tidyverse")
 #install.packages("janitor")
 #install.packages("ggplot2")
-install.packages("caret")
+#install.packages("caret")
 
 library(tidyverse)
 library(skimr)
@@ -349,5 +349,6 @@ plot(dt_model$finalModel, margin = 0.1)
 text(dt_model$finalModel, digits = 3, cex = 0.6) 
 
 #View the text representation of the decision rules
+print(dt_model$finalModel)
 print(dt_model$finalModel)
 ```
