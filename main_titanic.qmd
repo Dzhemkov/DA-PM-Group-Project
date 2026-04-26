@@ -13,6 +13,7 @@ Install the libraries and load the dataset. (Adjust path to the .csv file)
 #install.packages("tidyverse")
 #install.packages("janitor")
 #install.packages("ggplot2")
+install.packages("caret")
 
 library(tidyverse)
 library(skimr)
@@ -289,6 +290,64 @@ view(data_set)
 
 ```
 
-```{r}
+# WEEK 5
 
+```{r}
+library(caret)
+library(rpart)
+
+#DATA PREPARATION (Required for Advanced Modeling)
+#Remove rows with missing values (NA) and set factors
+dt_data <- data_set %>% 
+  drop_na(survived, pclass, sex, age, fare, FamilySize, IsAlone)
+
+dt_data$survived <- as.factor(dt_data$survived)
+dt_data$pclass <- as.factor(dt_data$pclass)
+dt_data$sex <- as.factor(dt_data$sex)
+
+#SPLIT DATASET (70% Train/30% Test)
+set.seed(42) # Ensures results are the same every time you run it
+train_index <- createDataPartition(dt_data$survived, p = 0.70, list = FALSE)
+
+# Force the matrix into a simple vector 
+train_index_vec <- as.vector(train_index)
+
+train_set <- dt_data[train_index_vec, ]
+test_set <- dt_data[-train_index_vec, ]
+
+
+#BUILD ADVANCED MODELS
+#Decision Tree (Classification: Predicting 'survived')
+#Predict if a passenger lived (1) or died (0) using cross-validation and pruning
+set.seed(42)
+dt_model <- train(
+  survived ~ pclass + sex + age + fare + FamilySize + IsAlone, 
+  data = train_set,
+  method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10 
+)
+
+
+#EVALUATE MODELS
+#Evaluate Complexity Parameter (cp)
+plot(dt_model)
+print(dt_model$bestTune)
+
+#Evaluate Decision Tree Accuracy
+dt_predictions <- predict(dt_model, newdata = test_set)
+test_accuracy <- mean(dt_predictions == test_set$survived)
+cat("Final Test Data Accuracy:", round(test_accuracy, 4), "\n")
+
+
+#INTERPRET MODEL RULES
+#View the graphical representation of the decision rules
+par(xpd = NA) 
+# Added margin = 0.1 to give the tree breathing room from the edges
+plot(dt_model$finalModel, margin = 0.1) 
+# Added cex = 0.6 to shrink the text to 60% of its normal size so it stops overlapping
+text(dt_model$finalModel, digits = 3, cex = 0.6) 
+
+#View the text representation of the decision rules
+print(dt_model$finalModel)
 ```
