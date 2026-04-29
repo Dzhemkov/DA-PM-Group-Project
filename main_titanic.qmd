@@ -151,7 +151,7 @@ ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
   geom_boxplot()
 ```
 
-# ── WEEK 2-3: EDA, Visualization & Transformation ──────────
+# WEEK 2-3: EDA, Visualization & Transformation
 
 ## Univariate Analysis — Distribution of Key Variables
 
@@ -364,4 +364,164 @@ ggplot(data_set, aes(x = GroupSize, fill = factor(survived))) +
   labs(title = "Survival Rate by Group Size",
        x = "Group Size", y = "Proportion") +
   theme_minimal()
+```
+
+# WEEK 4: Baseline Modeling
+
+```{r}
+# WEEK 4
+
+library(caret)
+
+# DATA CLEANING
+titanic_clean <- na.omit(data_set)
+
+titanic_clean$survived <- as.factor(titanic_clean$survived)
+titanic_clean$sex <- as.factor(titanic_clean$sex)
+titanic_clean$pclass <- as.factor(titanic_clean$pclass)
+
+# SPLIT DATASET (70/30)
+set.seed(42)
+
+index <- createDataPartition(titanic_clean$survived, p = 0.70, list = FALSE)
+index <- as.vector(index) 
+
+train_set <- titanic_clean[index, ]
+test_set  <- titanic_clean[-index, ]
+
+# BUILD MODELS
+# Linear Regression (Predict Fare)
+lm_model <- lm(fare ~ pclass + sex + age + sib_sp + parch, data = train_set)
+
+# Logistic Regression (Predict Survival)
+log_model <- glm(survived ~ pclass + sex + age + sib_sp + parch,
+                 data = train_set, family = "binomial")
+
+# EVALUATE LINEAR MODEL
+lm_predictions <- predict(lm_model, test_set)
+lm_rmse <- RMSE(lm_predictions, test_set$fare)
+
+cat("Linear Regression RMSE:", lm_rmse, "\n")
+
+# EVALUATE LOGISTIC MODEL
+log_probs <- predict(log_model, test_set, type = "response")
+log_preds <- ifelse(log_probs > 0.5, 1, 0)
+
+conf_matrix <- confusionMatrix(
+  as.factor(log_preds),
+  as.factor(test_set$survived),
+  positive = "1"
+)
+
+print(conf_matrix)
+
+cat("Accuracy:", conf_matrix$overall['Accuracy'], "\n")
+cat("Precision:", conf_matrix$byClass['Precision'], "\n")
+cat("Recall:", conf_matrix$byClass['Recall'], "\n")
+
+# Safe output (no crash)
+cat("\nConfusion Matrix:\n")
+print(conf_matrix$table)
+
+# MODEL COEFFICIENTS
+cat("\n--- Linear Regression Coefficients ---\n")
+print(summary(lm_model)$coefficients)
+
+cat("\n--- Logistic Regression Coefficients ---\n")
+print(summary(log_model)$coefficients)
+```
+
+# WEEK 5: Model Evaluation and Refinement
+
+SVM
+
+The SVM model achieved 71.83% accuracy. It is better at predicting non-survivors (Sensitivity = 0.7857) than survivors (Specificity = 0.627). The confusion matrix shows that this model is better at predicting survivors and worse at predicting non-survivors.
+
+Sensitivity = TP / (TP + FN)
+
+Specificity = TN / (TN + FP)
+
+```{r}
+library(caret)
+library(tidyverse)
+
+set.seed(123)
+
+#Clean data
+data_set_clean <- data_set %>%
+  select(-passenger_id, -name, -ticket) %>%
+  drop_na() %>%
+  mutate(across(where(is.character), as.factor))
+
+#Make the target a factor
+data_set_clean$survived <- factor(data_set_clean$survived, labels = c("Yes", "No"))
+
+#Train/Test split
+train_data <- createDataPartition(data_set_clean$survived, p = 0.8, list = FALSE)
+train_data <- as.vector(train_data) 
+
+train <- data_set_clean[train_data, ]
+test  <- data_set_clean[-train_data, ]
+
+#Train Control
+ctrl <- trainControl(
+  method = "cv",
+  number = 5
+)
+
+svm_model <- train(
+  survived ~ .,
+  data = train,
+  method = "svmRadial",
+  trControl = ctrl
+)
+
+#print(svm_model)
+
+svm_pred <- predict(svm_model, test)
+
+confusionMatrix(svm_pred, test$survived)
+confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+```
+
+Gradient Boosting (Doesn't work)
+
+```{r}
+#install.packages("xgboost")
+
+#library(tidyverse)
+#library(caret)
+#library(xgboost)
+
+#set.seed(123)
+
+#Clean data
+#data_clean <- data_set %>%
+#  select(-passenger_id, -name, -ticket) %>%
+#  drop_na() %>%
+#  mutate(across(where(is.character), as.factor))
+
+#Make the target a factor
+#data_clean$survived <- factor(data_clean$survived, levels = c(0,1), labels = c("Yes", "No"))
+
+#Train/Test split
+#train_data <- createDataPartition(data_clean$survived, p = 0.8, list = FALSE)
+#train_data <- as.vector(train_data) 
+
+#train <- data_clean[train_data, ]
+#test  <- data_clean[-train_data, ]
+
+#xgb_model <- train(
+#  survived ~ .,
+#  data = train,
+#  method = "xgbTree",
+#  trControl = trainControl(method ="cv",number = 5)
+#)
+
+#xgb_pred <- predict(xgb_model, test)
+
+#confusionMatrix(xgb_pred, test$survived)
+#confusionMatrix(xgb_pred, test$survived)$overall["Accuracy"]
+
+#varImp(xgb_model)
 ```
