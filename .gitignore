@@ -1,4 +1,13 @@
-.Rproj.user
+# RStudio files
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
+
+# Quarto/R Markdown outputs
+*.html
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
