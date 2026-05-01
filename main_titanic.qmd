@@ -13,6 +13,10 @@ Install the libraries and load the dataset. (Adjust path to the .csv file)
 #install.packages("tidyverse")
 #install.packages("janitor")
 #install.packages("ggplot2")
+#install.packages("tidymodels")
+#install.packages("backports")
+#install.packages("broom")
+#install.packages("randomForest")
 
 library(tidyverse)
 library(skimr)
@@ -436,7 +440,6 @@ print(summary(log_model)$coefficients)
 Random Forest
 
 ```{r}
-#install.packages("randomForest")
 library(randomForest)
 library(caret)
 
@@ -586,41 +589,51 @@ confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
 Gradient Boosting (Doesn't work)
 
 ```{r}
-#install.packages("xgboost")
-
 library(tidyverse)
-library(caret)
+library(tidymodels)
 library(xgboost)
 
-set.seed(123)
-
-#Clean data
 data_clean <- data_set %>%
   select(-passenger_id, -name, -ticket) %>%
   drop_na() %>%
-  mutate(across(where(is.character), as.factor))
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(survived = factor(survived, levels = c(0,1), labels = c("No","Yes")))
 
-#Make the target a factor
-data_clean$survived <- factor(data_clean$survived, levels = c(0,1), labels = c("Yes", "No"))
+#train test split
+set.seed(123)
 
-#Train/Test split
-train_data <- createDataPartition(data_clean$survived, p = 0.8, list = FALSE)
-train_data <- as.vector(train_data) 
+split <- initial_split(data_clean, prop = 0.8, strata = survived)
+train <- training(split)
+test  <- testing(split)
 
-train <- data_clean[train_data, ]
-test  <- data_clean[-train_data, ]
+#preprocessing
+rec <- recipe(survived ~ ., data = train) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors())
 
-xgb_model <- train(
-  survived ~ .,
-  data = train,
-  method = "xgbTree",
-  trControl = trainControl(method ="cv",number = 5)
-)
+#defining model
+xgb_model <- boost_tree(
+  mode = "classification",
+  trees = 150,
+  learn_rate = 0.3,
+  tree_depth = 2
+) %>%
+  set_engine("xgboost")
 
-xgb_pred <- predict(xgb_model, test)
+#combining into workflow
+wf <- workflow() %>%
+  add_model(xgb_model) %>%
+  add_recipe(rec)
 
-confusionMatrix(xgb_pred, test$survived)
-confusionMatrix(xgb_pred, test$survived)$overall["Accuracy"]
+#fitting model
+fit <- fit(wf, data = train)
 
-varImp(xgb_model)
+
+#predicting and evaluating
+preds <- predict(fit, test) %>%
+  bind_cols(test)
+
+conf_mat(preds, truth = survived, estimate = .pred_class)
+
+accuracy(preds, truth = survived, estimate = .pred_class)
 ```
