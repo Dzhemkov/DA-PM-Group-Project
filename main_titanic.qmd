@@ -478,8 +478,7 @@ Decision Tree
 library(caret)
 library(rpart)
 
-#DATA PREPARATION (Required for Advanced Modeling)
-#Remove rows with missing values (NA) and set factors
+#remove rows with missing variables and set factors
 dt_data <- data_set %>% 
   drop_na(survived, pclass, sex, age, fare, FamilySize, IsAlone)
 
@@ -487,20 +486,18 @@ dt_data$survived <- as.factor(dt_data$survived)
 dt_data$pclass <- as.factor(dt_data$pclass)
 dt_data$sex <- as.factor(dt_data$sex)
 
-#SPLIT DATASET (70% Train/30% Test)
+#split dataset
 set.seed(42) # Ensures results are the same every time you run it
 train_index <- createDataPartition(dt_data$survived, p = 0.70, list = FALSE)
 
-# Force the matrix into a simple vector 
+#force matrix into a simple vector
 train_index_vec <- as.vector(train_index)
 
 train_set <- dt_data[train_index_vec, ]
 test_set <- dt_data[-train_index_vec, ]
 
-
-#BUILD ADVANCED MODELS
-#Decision Tree (Classification: Predicting 'survived')
-#Predict if a passenger lived (1) or died (0) using cross-validation and pruning
+#decision tree
+#predict if a passenger lived (1) or died (0) using cross-validation and pruning
 set.seed(42)
 dt_model <- train(
   survived ~ pclass + sex + age + fare + FamilySize + IsAlone, 
@@ -511,27 +508,23 @@ dt_model <- train(
 )
 
 
-#EVALUATE MODELS
-#Evaluate Complexity Parameter (cp)
+#evaluate complexity parameter
 plot(dt_model)
 print(dt_model$bestTune)
 
-#Evaluate Decision Tree Accuracy
+#evaluate accuracy
 dt_predictions <- predict(dt_model, newdata = test_set)
 test_accuracy <- mean(dt_predictions == test_set$survived)
 cat("Final Test Data Accuracy:", round(test_accuracy, 4), "\n")
 
 
-#INTERPRET MODEL RULES
-#View the graphical representation of the decision rules
+#view the graph
 par(xpd = NA) 
-# Added margin = 0.1 to give the tree breathing room from the edges
-plot(dt_model$finalModel, margin = 0.1) 
-# Added cex = 0.6 to shrink the text to 60% of its normal size so it stops overlapping
+
+plot(dt_model$finalModel, uniform = TRUE, margin = 0.1) 
 text(dt_model$finalModel, digits = 3, cex = 0.6) 
 
-#View the text representation of the decision rules
-print(dt_model$finalModel)
+#view the text representation of the decision rules
 print(dt_model$finalModel)
 ```
 
@@ -636,4 +629,47 @@ preds <- predict(fit, test) %>%
 conf_mat(preds, truth = survived, estimate = .pred_class)
 
 accuracy(preds, truth = survived, estimate = .pred_class)
+```
+
+**Model Comparison:**
+
+Performance Metrics
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+#gather test accuracies 
+log_acc <- conf_matrix$overall['Accuracy']
+rf_acc <- rf_conf_matrix$overall['Accuracy']
+dt_acc <- test_accuracy # Created in the Decision Tree section
+svm_acc <- confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+
+#create comparison table
+model_comparison <- data.frame(
+  Model = c("Logistic Regression (Baseline)", "Decision Tree", "Random Forest", "SVM"),
+  Accuracy = c(log_acc, dt_acc, rf_acc, svm_acc)
+)
+
+#sort from highest to lowest
+model_comparison <- model_comparison %>%
+  arrange(desc(Accuracy))
+
+cat("\n--- Final Model Comparison Table ---\n")
+print(model_comparison)
+
+#visualize
+ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = Model)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  coord_flip() + # Flips horizontally for easier reading
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  geom_text(aes(label = scales::percent(Accuracy, accuracy = 0.1)), 
+            hjust = -0.2, size = 4, fontface = "bold") +
+  labs(title = "Titanic Survival Prediction: Model Accuracy Comparison",
+       x = "Algorithm",
+       y = "Test Data Accuracy") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(face = "bold", size = 14))
 ```
