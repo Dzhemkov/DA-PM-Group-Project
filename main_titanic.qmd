@@ -614,6 +614,87 @@ ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = 
         plot.title = element_text(face = "bold", size = 14))
 ```
 
-```{r}
+Cross-comparison
 
+```{r}
+library(caret)
+
+set.seed(42)
+
+# Shared 10-fold CV - used by ALL models
+cv_control <- trainControl(
+  method          = "cv",
+  number          = 10,
+  savePredictions = "final",   # lets you inspect fold-level predictions
+  classProbs      = TRUE,      # needed for ROC/AUC later
+  summaryFunction = twoClassSummary  # gives ROC in addition to accuracy
+)
+
+# Make sure survived is a named factor (caret needs valid R names)
+titanic_cv <- titanic_clean
+titanic_cv$survived <- factor(titanic_cv$survived, labels = c("No", "Yes"))
+
+# Logistic Regression
+set.seed(42)
+cv_log <- train(
+  survived ~ pclass + sex + age + sib_sp + parch,
+  data      = titanic_cv,
+  method    = "glm",
+  family    = "binomial",
+  trControl = cv_control,
+  metric    = "ROC"
+)
+
+# Random Forest (tune mtry automatically)
+set.seed(42)
+cv_rf <- train(
+  survived ~ pclass + sex + age + sib_sp + parch + fare,
+  data      = titanic_cv,
+  method    = "rf",
+  trControl = cv_control,
+  metric    = "ROC",
+  tuneLength = 5   # tries 5 values of mtry
+)
+
+# Decision Tree (already uses caret — just swap in cv_control)
+set.seed(42)
+cv_dt <- train(
+  survived ~ pclass + sex + age + fare + FamilySize + IsAlone,
+  data      = titanic_cv,
+  method    = "rpart",
+  trControl = cv_control,
+  metric    = "ROC",
+  tuneLength = 10
+)
+
+# SVM (already uses caret — just swap in cv_control)
+set.seed(42)
+cv_svm <- train(
+  survived ~ .,
+  data      = titanic_cv,
+  method    = "svmRadial",
+  trControl = cv_control,
+  metric    = "ROC"
+)
+
+results <- resamples(list(
+  Logistic = cv_log,
+  DecisionTree = cv_dt,
+  RandomForest = cv_rf,
+  SVM          = cv_svm
+))
+
+# Summary table (mean ROC, Sens, Spec across folds)
+summary(results)
+
+# Visual comparison — dotplot shows mean + confidence interval per model
+dotplot(results, metric = "ROC")
+
+# Boxplot shows variability across folds
+bwplot(results, metric = "ROC")
+
+diff_results <- diff(results)
+summary(diff_results)
 ```
+
+We conclude that RandomForest is the most accurate model!
