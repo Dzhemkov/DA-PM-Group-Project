@@ -625,6 +625,96 @@ xgb_res <- fit_resamples(
 # Extract results
 xgb_metrics <- collect_metrics(xgb_res)
 print(xgb_metrics)
+library(tidyverse)
+library(tidymodels)
+library(xgboost)
+
+data_clean <- data_set %>%
+  select(-passenger_id, -name, -ticket) %>%
+  drop_na() %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(survived = factor(survived, levels = c(0,1), labels = c("No","Yes")))
+
+#train test split
+set.seed(123)
+
+split <- initial_split(data_clean, prop = 0.8, strata = survived)
+train <- training(split)
+test  <- testing(split)
+
+#preprocessing
+rec <- recipe(survived ~ ., data = train) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors())
+
+#defining model
+xgb_model <- boost_tree(
+  mode = "classification",
+  trees = 150,
+  learn_rate = 0.3,
+  tree_depth = 2
+) %>%
+  set_engine("xgboost")
+
+#combining into workflow
+wf <- workflow() %>%
+  add_model(xgb_model) %>%
+  add_recipe(rec)
+
+#fitting model
+fit <- fit(wf, data = train)
+
+
+#predicting and evaluating
+preds <- predict(fit, test) %>%
+  bind_cols(test)
+
+conf_mat(preds, truth = survived, estimate = .pred_class)
+
+accuracy(preds, truth = survived, estimate = .pred_class)
+```
+
+**Model Comparison:**
+
+Performance Metrics
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+#gather test accuracies 
+log_acc <- conf_matrix$overall['Accuracy']
+rf_acc <- rf_conf_matrix$overall['Accuracy']
+dt_acc <- test_accuracy # Created in the Decision Tree section
+svm_acc <- confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+
+#create comparison table
+model_comparison <- data.frame(
+  Model = c("Logistic Regression (Baseline)", "Decision Tree", "Random Forest", "SVM"),
+  Accuracy = c(log_acc, dt_acc, rf_acc, svm_acc)
+)
+
+#sort from highest to lowest
+model_comparison <- model_comparison %>%
+  arrange(desc(Accuracy))
+
+cat("\n--- Final Model Comparison Table ---\n")
+print(model_comparison)
+
+#visualize
+ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = Model)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  coord_flip() + # Flips horizontally for easier reading
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  geom_text(aes(label = scales::percent(Accuracy, accuracy = 0.1)), 
+            hjust = -0.2, size = 4, fontface = "bold") +
+  labs(title = "Titanic Survival Prediction: Model Accuracy Comparison",
+       x = "Algorithm",
+       y = "Test Data Accuracy") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(face = "bold", size = 14))
 ```
 
 **Model Comparison:**
