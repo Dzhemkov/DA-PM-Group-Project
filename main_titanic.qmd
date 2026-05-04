@@ -402,6 +402,7 @@ lm_model <- lm(
   fare ~ pclass + sex + age + sib_sp + parch,
   data = train_set
 )
+summary(lm_model)
 
 lm_predictions <- predict(lm_model, test_set)
 
@@ -452,6 +453,8 @@ print(summary(log_model)$coefficients)
 Random Forest
 
 ```{r}
+library(randomForest)
+
 set.seed(42)
 
 train_rf <- train_set
@@ -546,14 +549,33 @@ conf_svm$overall["Accuracy"]
 Gradient Boosting
 
 ```{r}
-train_xgb <- train
-test_xgb  <- test
+library(tidymodels)
 
-pred_xgb <- predict(fit, test_xgb) %>%
-  bind_cols(test_xgb)
+# 1. Define the XGBoost model specification
+# Note: changed 'learning_rate' to 'learn_rate'
+xgb_spec <- boost_tree(
+  trees = 100, 
+  tree_depth = 3, 
+  learn_rate = 0.1
+) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("classification")
 
+# 2. Define the workflow
+xgb_workflow <- workflow() %>%
+  add_formula(survived ~ pclass + sex + age + sib_sp + parch + fare) %>%
+  add_model(xgb_spec)
+
+# 3. Train the model using the train_set from your Week 4 code
+fit_xgb <- fit(xgb_workflow, data = train_set)
+
+# 4. Predict on test_set
+pred_xgb <- predict(fit_xgb, test_set) %>%
+  bind_cols(test_set)
+
+# 5. Calculate Accuracy
 acc_xgb <- accuracy(pred_xgb, truth = survived, estimate = .pred_class)
-acc_xgb
+print(acc_xgb)
 ```
 
 **Model Comparison:**
