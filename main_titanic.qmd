@@ -13,6 +13,10 @@ Install the libraries and load the dataset. (Adjust path to the .csv file)
 #install.packages("tidyverse")
 #install.packages("janitor")
 #install.packages("ggplot2")
+#install.packages("tidymodels")
+#install.packages("backports")
+#install.packages("broom")
+#install.packages("randomForest")
 
 library(tidyverse)
 library(skimr)
@@ -47,6 +51,8 @@ Data dictionary (additional info).
 skim(data_set)
 ```
 
+The dataset contains passenger information from the RMS Titanic sinking, including variables such as survival status, passenger class, sex, age, and fare. There are several missing values in the age, cabin, and embarked columns, but no duplicate records were found.
+
 We will use the data to analyze the factors that affected survival status among the passengers.
 
 survived (0 = No, 1 = Yes)
@@ -66,6 +72,8 @@ cat("\nNumber of duplicates:", sum(duplicated(data_set)), "\n")
 
 Summary Statistics
 
+The summary statistics show that age is spread across a wide range, indicating a diverse group of passengers. Fare is highly skewed, with most passengers paying lower amounts and a small number paying very high prices. The survival variable is imbalanced, more passengers died than survived. Because of the skewness in fare, it may need to be adjusted or capped for better analysis.
+
 ```{r}
 summary(data_set)
 
@@ -76,6 +84,8 @@ data_set %>%
 ```
 
 Histograms
+
+The age distribution appears slightly skewed. Fare is heavily right-skewed, confirming the presence of outliers. Most passengers traveled with few or no family members, as shown by the sib_sp and parch distributions. The survival count shows that more passengers died than survived. The majority of passengers were in 3rd class, and there were more males than females on board. Most passengers embarked from Southampton. These distributions suggest that class, sex, and fare may be important factors in survival.
 
 ```{r}
 ggplot(data_set, aes(x = age)) +
@@ -114,6 +124,8 @@ ggplot(data_set, aes(x = embarked)) +
 
 Boxplots
 
+The boxplots show that passengers who survived generally paid higher fares compared to those who did not survive. The fare variable contains extreme outliers, which can distort analysis.
+
 ```{r}
 ggplot(data_set, aes(x = factor(survived), y = age)) +
   geom_boxplot()
@@ -123,6 +135,8 @@ ggplot(data_set, aes(x = factor(survived), y = fare)) +
 ```
 
 Outliers
+
+After capping fare at the 99th percentile, the distribution becomes more stable while still keeping most of the data, making further analysis more reliable.
 
 ```{r}
 #Cap fare at 99th percentile
@@ -141,9 +155,11 @@ ggplot(outlier_less_ds, aes(x = factor(survived), y = fare)) +
   geom_boxplot()
 ```
 
-# ── WEEK 2-3: EDA, Visualization & Transformation ──────────
+# WEEK 2-3: EDA, Visualization & Transformation
 
 ## Univariate Analysis — Distribution of Key Variables
+
+The univariate analysis shows how each variable is distributed on its own. Age is somewhat normally distributed but slightly skewed, indicating a mix of younger and older passengers. Fare is heavily right-skewed, with most passengers paying low amounts and a few paying very high prices, which confirms the presence of outliers. The survival distribution shows that more passengers died than survived, so the outcome is imbalanced. Passenger class distribution shows that most people were in 3rd class, while fewer were in 1st and 2nd class. The sex distribution shows that there were more males than females on board.
 
 ```{r}
 library(tidyverse)
@@ -185,6 +201,8 @@ ggplot(data_set, aes(x = sex)) +
 
 ### Correlation Analysis — Numeric Variables
 
+The correlation analysis shows a negative relationship between passenger class and fare, meaning higher-class passengers paid more. There is also a negative relationship between passenger class and survival, indicating that higher-class passengers were more likely to survive. Most other relationships are weak, suggesting that survival is influenced by multiple variables rather than a single strong factor.
+
 ```{r}
 # Select numeric columns and remove NAs
 numeric_data <- data_set %>%
@@ -203,6 +221,8 @@ ggcorrplot(cor_matrix,
 ```
 
 ### Scatter Plot — Age vs Fare by Survival
+
+The scatter plots show that passengers who paid higher fares were more likely to survive. Lower-class passengers had lower survival rates, reinforcing the importance of socioeconomic status. Age does not show a strong or clear relationship with survival, other than the fact that if you were in a lower class you were more likely to survive if you were younger. Overall, fare and class appear to be more important predictors than age.
 
 ```{r}
 ggplot(data_set, aes(x = age, y = fare, color = factor(survived))) +
@@ -232,6 +252,8 @@ ggplot(data_set, aes(x = factor(pclass), y = factor(survived), color = factor(su
 ```
 
 ### Group Comparisons — Categorical vs Numeric
+
+The group comparisons show clear differences in survival rates. Females had a much higher survival rate than males, and passengers in higher classes were more likely to survive than those in lower classes. Fare also varies significantly by class, with higher-class passengers paying more. These patterns suggest that both gender and socioeconomic status played a major role in determining survival.
 
 ```{r}
 # Survival rate by sex
@@ -263,6 +285,8 @@ ggplot(data_set, aes(x = factor(pclass), y = fare, fill = factor(pclass))) +
 
 Feature Engineering
 
+Several new variables were created to better capture passenger characteristics. FamilySize represents the total number of family members aboard, while IsAlone indicates whether a passenger was traveling alone. Deck was extracted from the cabin information, even though a lot of values were missing and labeled as unknown. GroupSize shows how many passengers shared the same ticket, and FareBin categorizes fares into levels. The cutoffs at 8, 15, and 31 roughly separate low-cost tickets from mid-range, higher, and very expensive fares based on how the data is distributed. Since fare is heavily right-skewed, most values are concentrated at the lower end, so smaller intervals are used there, while a larger range captures the high-end outliers. These new features provide more structure to the data and may improve future analysis.
+
 ```{r}
 # Create FamilySize
 data_set$FamilySize <- data_set$sib_sp + data_set$parch + 1
@@ -289,6 +313,365 @@ view(data_set)
 
 ```
 
+New columns vs. Survival
+
+These visualizations help confirm that the engineered features and fare bins capture meaningful patterns in the data. The fare distribution with cutoffs shows that most values are concentrated in the lower ranges, which justifies the bin choices. The survival-by-bin plot shows clear differences across fare levels, supporting the idea that fare is linked to survival. Similarly, features like FamilySize, IsAlone, Deck, and GroupSize reveal patterns that are not obvious in the raw data, making them useful for further analysis.
+
+```{r}
+ggplot(data_set, aes(x = fare)) +
+  geom_histogram(bins = 40, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = c(8, 15, 31), 
+             linetype = "dashed", 
+             color = "red") +
+  labs(title = "Fare Distribution with Bin Cutoffs",
+       x = "Fare", y = "Count") +
+  theme_minimal()
+
+ggplot(data_set, aes(x = FareBin, fill = factor(survived))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("0" = "tomato", "1" = "steelblue"),
+                    labels = c("Died", "Survived")) +
+  labs(title = "Survival Rate by Fare Bin",
+       x = "Fare Bin", y = "Proportion", fill = "Survival") +
+  theme_minimal()
+
+ggplot(data_set, aes(x = FamilySize, fill = factor(survived))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("0" = "tomato", "1" = "steelblue"),
+                    labels = c("Died", "Survived")) +
+  labs(title = "Survival Rate by Family Size",
+       x = "Family Size", y = "Proportion") +
+  theme_minimal()
+
+ggplot(data_set, aes(x = factor(IsAlone), fill = factor(survived))) +
+  geom_bar(position = "fill") +
+  scale_x_discrete(labels = c("0" = "Not Alone", "1" = "Alone")) +
+  scale_fill_manual(values = c("0" = "tomato", "1" = "steelblue"),
+                    labels = c("Died", "Survived")) +
+  labs(title = "Survival Rate: Alone vs Not Alone",
+       x = "Passenger Type", y = "Proportion") +
+  theme_minimal()
+
+ggplot(data_set, aes(x = Deck, fill = factor(survived))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("0" = "tomato", "1" = "steelblue"),
+                    labels = c("Died", "Survived")) +
+  labs(title = "Survival Rate by Deck",
+       x = "Deck", y = "Proportion") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data_set, aes(x = GroupSize, fill = factor(survived))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("0" = "tomato", "1" = "steelblue"),
+                    labels = c("Died", "Survived")) +
+  labs(title = "Survival Rate by Group Size",
+       x = "Group Size", y = "Proportion") +
+  theme_minimal()
+```
+
+# WEEK 4: Baseline Modeling
+
+The baseline analysis utilized Linear and Logistic Regression to establish performance "floors" for predicting ticket fares and passenger survival, respectively. The Logistic model achieved a 80.84% accuracy on the test set, with a 79.49% precision and 71.26% recall. Statistical significance tests (p-values \< 0.05) identified Passenger Class (Pclass), Sex, and Age as the primary drivers of survival, while ticket fares (predicted with an RMSE of 42.44) were mostly influenced by class and family size rather than demographic factors. While the models provided clear insights into variable relationships, the presence of 16 Type 1 errors (False Positives) and 25 Type 2 errors (False Negatives) suggested that the linear assumptions of these models might be oversimplifying complex survival patterns.
+
+```{r}
+# WEEK 4
+
+library(caret)
+
+# DATA CLEANING
+titanic_clean <- na.omit(data_set)
+
+titanic_clean$survived <- as.factor(titanic_clean$survived)
+titanic_clean$sex <- as.factor(titanic_clean$sex)
+titanic_clean$pclass <- as.factor(titanic_clean$pclass)
+
+# SPLIT DATASET (70/30)
+set.seed(42)
+
+index <- createDataPartition(titanic_clean$survived, p = 0.70, list = FALSE)
+index <- as.vector(index) 
+
+train_set <- titanic_clean[index, ]
+test_set  <- titanic_clean[-index, ]
+
+# BUILD MODELS
+# Linear Regression (Predict Fare)
+lm_model <- lm(fare ~ pclass + sex + age + sib_sp + parch, data = train_set)
+
+# Logistic Regression (Predict Survival)
+log_model <- glm(survived ~ pclass + sex + age + sib_sp + parch,
+                 data = train_set, family = "binomial")
+
+# EVALUATE LINEAR MODEL
+lm_predictions <- predict(lm_model, test_set)
+lm_rmse <- RMSE(lm_predictions, test_set$fare)
+
+cat("Linear Regression RMSE:", lm_rmse, "\n")
+
+# EVALUATE LOGISTIC MODEL
+log_probs <- predict(log_model, test_set, type = "response")
+log_preds <- ifelse(log_probs > 0.5, 1, 0)
+
+conf_matrix <- confusionMatrix(
+  as.factor(log_preds),
+  as.factor(test_set$survived),
+  positive = "1"
+)
+
+print(conf_matrix)
+
+cat("Accuracy:", conf_matrix$overall['Accuracy'], "\n")
+cat("Precision:", conf_matrix$byClass['Precision'], "\n")
+cat("Recall:", conf_matrix$byClass['Recall'], "\n")
+
+# Safe output (no crash)
+cat("\nConfusion Matrix:\n")
+print(conf_matrix$table)
+
+# MODEL COEFFICIENTS
+cat("\n--- Linear Regression Coefficients ---\n")
+print(summary(lm_model)$coefficients)
+
+cat("\n--- Logistic Regression Coefficients ---\n")
+print(summary(log_model)$coefficients)
+```
+
+# WEEK 5: Model Evaluation and Refinement
+
+A Random Forest ensemble model was implemented with 500 decision trees to capture non-linear interactions within the data. This approach improved overall accuracy to 81.78% and significantly boosted precision to 84.29%, indicating a more reliable prediction of survivors. The model demonstrated high specificity (91.34%), reducing Type 1 errors from 16 down to 11, which confirms that the ensemble method is much more effective at identifying true negatives. The 18.6% Out-of-Bag (OOB) error rate validates the model's internal stability and suggests that the Random Forest's ability to "vote" across multiple trees provides a more robust and trustworthy analysis of the Titanic dataset than the baseline logistic approach.
+
+```{r}
+library(randomForest)
+library(caret)
+
+# ('train_set' and 'test_set' is needed from Week 4)
+# Ensure NAs are gone
+train_set <- na.omit(train_set)
+test_set <- na.omit(test_set)
+
+# Build the Random Forest Model
+# We are predicting 'Survived' using the same features as before
+set.seed(42) # For consistent results
+rf_model <- randomForest(survived ~ pclass + sex + age + sib_sp + parch + fare, 
+                         data = train_set, 
+                         ntree = 500,        # Number of trees in the forest
+                         importance = TRUE)  # To see which variables matter most
+
+# Model Summary
+print(rf_model)
+
+# Make Predictions on the Test Set
+rf_preds <- predict(rf_model, test_set)
+
+# Evaluate Performance
+# Accuracy, Precision, and Recall for Week 5
+rf_conf_matrix <- confusionMatrix(rf_preds, test_set$survived, positive = "1")
+print(rf_conf_matrix)
+
+# Check Variable Importance
+# This shows which features (like Sex or Age) were most important to the model
+varImpPlot(rf_model, main = "Variable Importance for Titanic Survival")
+```
+
+Decision Tree
+
+```{r}
+library(caret)
+library(rpart)
+
+#remove rows with missing variables and set factors
+dt_data <- data_set %>% 
+  drop_na(survived, pclass, sex, age, fare, FamilySize, IsAlone)
+
+dt_data$survived <- as.factor(dt_data$survived)
+dt_data$pclass <- as.factor(dt_data$pclass)
+dt_data$sex <- as.factor(dt_data$sex)
+
+#split dataset
+set.seed(42) # Ensures results are the same every time you run it
+train_index <- createDataPartition(dt_data$survived, p = 0.70, list = FALSE)
+
+#force matrix into a simple vector
+train_index_vec <- as.vector(train_index)
+
+train_set <- dt_data[train_index_vec, ]
+test_set <- dt_data[-train_index_vec, ]
+
+#decision tree
+#predict if a passenger lived (1) or died (0) using cross-validation and pruning
+set.seed(42)
+dt_model <- train(
+  survived ~ pclass + sex + age + fare + FamilySize + IsAlone, 
+  data = train_set,
+  method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10 
+)
+
+
+#evaluate complexity parameter
+plot(dt_model)
+print(dt_model$bestTune)
+
+#evaluate accuracy
+dt_predictions <- predict(dt_model, newdata = test_set)
+test_accuracy <- mean(dt_predictions == test_set$survived)
+cat("Final Test Data Accuracy:", round(test_accuracy, 4), "\n")
+
+
+#view the graph
+par(xpd = NA) 
+
+plot(dt_model$finalModel, uniform = TRUE, margin = 0.1) 
+text(dt_model$finalModel, digits = 3, cex = 0.6) 
+
+#view the text representation of the decision rules
+print(dt_model$finalModel)
+```
+
+SVM
+
+The SVM model achieved 71.83% accuracy. It is better at predicting non-survivors (Sensitivity = 0.7857) than survivors (Specificity = 0.627). The confusion matrix shows that this model is better at predicting survivors and worse at predicting non-survivors.
+
+Sensitivity = TP / (TP + FN)
+
+Specificity = TN / (TN + FP)
+
+```{r}
+library(caret)
+library(tidyverse)
+
+set.seed(123)
+
+#Clean data
+data_set_clean <- data_set %>%
+  select(-passenger_id, -name, -ticket) %>%
+  drop_na() %>%
+  mutate(across(where(is.character), as.factor))
+
+#Make the target a factor
+data_set_clean$survived <- factor(data_set_clean$survived, labels = c("Yes", "No"))
+
+#Train/Test split
+train_data <- createDataPartition(data_set_clean$survived, p = 0.8, list = FALSE)
+train_data <- as.vector(train_data) 
+
+train <- data_set_clean[train_data, ]
+test  <- data_set_clean[-train_data, ]
+
+#Train Control
+ctrl <- trainControl(
+  method = "cv",
+  number = 5
+)
+
+svm_model <- train(
+  survived ~ .,
+  data = train,
+  method = "svmRadial",
+  trControl = ctrl
+)
+
+#print(svm_model)
+
+svm_pred <- predict(svm_model, test)
+
+confusionMatrix(svm_pred, test$survived)
+confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+```
+
+Gradient Boosting (Doesn't work)
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(xgboost)
+
+data_clean <- data_set %>%
+  select(-passenger_id, -name, -ticket) %>%
+  drop_na() %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(survived = factor(survived, levels = c(0,1), labels = c("No","Yes")))
+
+#train test split
+set.seed(123)
+
+split <- initial_split(data_clean, prop = 0.8, strata = survived)
+train <- training(split)
+test  <- testing(split)
+
+#preprocessing
+rec <- recipe(survived ~ ., data = train) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_predictors())
+
+#defining model
+xgb_model <- boost_tree(
+  mode = "classification",
+  trees = 150,
+  learn_rate = 0.3,
+  tree_depth = 2
+) %>%
+  set_engine("xgboost")
+
+#combining into workflow
+wf <- workflow() %>%
+  add_model(xgb_model) %>%
+  add_recipe(rec)
+
+#fitting model
+fit <- fit(wf, data = train)
+
+
+#predicting and evaluating
+preds <- predict(fit, test) %>%
+  bind_cols(test)
+
+conf_mat(preds, truth = survived, estimate = .pred_class)
+
+accuracy(preds, truth = survived, estimate = .pred_class)
+```
+
+**Model Comparison:**
+
+Performance Metrics
+
 ```{r}
 
+library(ggplot2)
+library(dplyr)
+
+#gather test accuracies 
+log_acc <- conf_matrix$overall['Accuracy']
+rf_acc <- rf_conf_matrix$overall['Accuracy']
+dt_acc <- test_accuracy # Created in the Decision Tree section
+svm_acc <- confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+
+#create comparison table
+model_comparison <- data.frame(
+  Model = c("Logistic Regression (Baseline)", "Decision Tree", "Random Forest", "SVM"),
+  Accuracy = c(log_acc, dt_acc, rf_acc, svm_acc)
+)
+
+#sort from highest to lowest
+model_comparison <- model_comparison %>%
+  arrange(desc(Accuracy))
+
+cat("\n--- Final Model Comparison Table ---\n")
+print(model_comparison)
+
+#visualize
+ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = Model)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  coord_flip() + # Flips horizontally for easier reading
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  geom_text(aes(label = scales::percent(Accuracy, accuracy = 0.1)), 
+            hjust = -0.2, size = 4, fontface = "bold") +
+  labs(title = "Titanic Survival Prediction: Model Accuracy Comparison",
+       x = "Algorithm",
+       y = "Test Data Accuracy") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(face = "bold", size = 14))
 ```
