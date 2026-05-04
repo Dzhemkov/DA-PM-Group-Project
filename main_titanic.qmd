@@ -579,82 +579,52 @@ confusionMatrix(svm_pred, test$survived)
 confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
 ```
 
-Gradient Boosting
+Gradient Boosting (made to fit with cross-comparison)
 
 ```{r}
-<<<<<<< HEAD
-
-=======
->>>>>>> 76225a5ab3082963724b69cd2233c4e41fc9d1c8
-library(tidyverse)
 library(tidymodels)
 library(xgboost)
 
-<<<<<<< HEAD
-#cleaning data
-=======
->>>>>>> 76225a5ab3082963724b69cd2233c4e41fc9d1c8
-data_clean <- data_set %>%
-  select(-passenger_id, -name, -ticket) %>%
-  drop_na() %>%
-  mutate(across(where(is.character), as.factor)) %>%
-  mutate(survived = factor(survived, levels = c(0,1), labels = c("No","Yes")))
+titanic_cv <- titanic_clean
+titanic_cv$survived <- factor(titanic_cv$survived, labels = c("No", "Yes"))
 
-#train test split
-set.seed(123)
+# Use the same data
+titanic_xgb <- titanic_cv %>%
+  mutate(across(where(is.factor) & !all_of("survived"), as.numeric)) # xgboost needs numeric
 
-split <- initial_split(data_clean, prop = 0.8, strata = survived)
-train <- training(split)
-test  <- testing(split)
+# Same 10-fold CV
+set.seed(42)
+xgb_folds <- vfold_cv(titanic_xgb, v = 10, strata = survived)
 
-#preprocessing
-rec <- recipe(survived ~ ., data = train) %>%
-  step_dummy(all_nominal_predictors()) %>%
+# Recipe
+xgb_rec <- recipe(survived ~ pclass + sex + age + fare + sib_sp + parch + FamilySize + IsAlone,
+                  data = titanic_xgb) %>%
   step_zv(all_predictors())
 
-#defining model
-xgb_model <- boost_tree(
-  mode = "classification",
-  trees = 150,
+# Model
+xgb_spec <- boost_tree(
+  trees     = 150,
   learn_rate = 0.3,
   tree_depth = 2
 ) %>%
-  set_engine("xgboost")
-<<<<<<< HEAD
+  set_engine("xgboost") %>%
+  set_mode("classification")
 
-#combining into workflow
-wf <- workflow() %>%
-  add_model(xgb_model) %>%
-  add_recipe(rec)
+# Workflow
+xgb_wf <- workflow() %>%
+  add_recipe(xgb_rec) %>%
+  add_model(xgb_spec)
 
-#fitting model
-fit <- fit(wf, data = train)
+# Fit across folds
+xgb_res <- fit_resamples(
+  xgb_wf,
+  resamples = xgb_folds,
+  metrics   = metric_set(roc_auc, sensitivity, specificity)
+)
 
-#predicting and evaluating
-preds <- predict(fit, test) %>%
-  bind_cols(test)
-
-conf_mat(preds, truth = survived, estimate = .pred_class)
-
-accuracy(preds, truth = survived, estimate = .pred_class)
-=======
-
-#combining into workflow
-wf <- workflow() %>%
-  add_model(xgb_model) %>%
-  add_recipe(rec)
-
-#fitting model
-fit <- fit(wf, data = train)
-
-
-#predicting and evaluating
-preds <- predict(fit, test) %>%
-  bind_cols(test)
-
-conf_mat(preds, truth = survived, estimate = .pred_class)
-
-accuracy(preds, truth = survived, estimate = .pred_class)
+# Extract results
+xgb_metrics <- collect_metrics(xgb_res)
+print(xgb_metrics)
 ```
 
 **Model Comparison:**
@@ -698,5 +668,122 @@ ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = 
   theme_minimal() +
   theme(legend.position = "none", 
         plot.title = element_text(face = "bold", size = 14))
->>>>>>> 76225a5ab3082963724b69cd2233c4e41fc9d1c8
+
 ```
+
+Cross-comparison 1
+
+```{r}
+library(caret)
+
+set.seed(42)
+
+# Shared 10-fold CV — used by ALL models
+cv_control <- trainControl(
+  method          = "cv",
+  number          = 10,
+  savePredictions = "final",   # lets you inspect fold-level predictions
+  classProbs      = TRUE,      # needed for ROC/AUC later
+  summaryFunction = twoClassSummary  # gives ROC in addition to accuracy
+)
+
+# Make sure survived is a named factor (caret needs valid R names)
+titanic_cv <- titanic_clean
+titanic_cv$survived <- factor(titanic_cv$survived, labels = c("No", "Yes"))
+
+# Logistic Regression
+set.seed(42)
+cv_log <- train(
+  survived ~ pclass + sex + age + sib_sp + parch,
+  data      = titanic_cv,
+  method    = "glm",
+  family    = "binomial",
+  trControl = cv_control,
+  metric    = "ROC"
+)
+
+# Random Forest (tune mtry automatically)
+set.seed(42)
+cv_rf <- train(
+  survived ~ pclass + sex + age + sib_sp + parch + fare,
+  data      = titanic_cv,
+  method    = "rf",
+  trControl = cv_control,
+  metric    = "ROC",
+  tuneLength = 5   # tries 5 values of mtry
+)
+
+# Decision Tree (already uses caret — just swap in cv_control)
+set.seed(42)
+cv_dt <- train(
+  survived ~ pclass + sex + age + fare + FamilySize + IsAlone,
+  data      = titanic_cv,
+  method    = "rpart",
+  trControl = cv_control,
+  metric    = "ROC",
+  tuneLength = 10
+)
+
+# SVM (already uses caret — just swap in cv_control)
+set.seed(42)
+cv_svm <- train(
+  survived ~ .,
+  data      = titanic_cv,
+  method    = "svmRadial",
+  trControl = cv_control,
+  metric    = "ROC"
+)
+
+results <- resamples(list(
+  Logistic = cv_log,
+  DecisionTree = cv_dt,
+  RandomForest = cv_rf,
+  SVM          = cv_svm
+))
+
+# Summary table (mean ROC, Sens, Spec across folds)
+summary(results)
+
+# Visual comparison — dotplot shows mean + confidence interval per model
+dotplot(results, metric = "ROC")
+
+# Boxplot shows variability across folds
+bwplot(results, metric = "ROC")
+
+diff_results <- diff(results)
+summary(diff_results)
+```
+
+Final cross-comparison (comparing all models)
+
+```{r}
+# Extract XGBoost mean ROC
+xgb_roc  <- xgb_metrics %>% filter(.metric == "roc_auc") %>% pull(mean)
+xgb_sens <- xgb_metrics %>% filter(.metric == "sensitivity") %>% pull(mean)
+xgb_spec <- xgb_metrics %>% filter(.metric == "specificity") %>% pull(mean)
+
+# Pull caret model means
+caret_summary <- summary(results)$statistics
+
+combined_comparison <- data.frame(
+  Model       = c("Logistic", "DecisionTree", "RandomForest", "SVM", "XGBoost"),
+  Mean_ROC    = c(caret_summary$ROC[,"Mean"], xgb_roc),
+  Mean_Sens   = c(caret_summary$Sens[,"Mean"], xgb_sens),
+  Mean_Spec   = c(caret_summary$Spec[,"Mean"], xgb_spec)
+) %>% arrange(desc(Mean_ROC))
+
+print(combined_comparison)
+
+# Visualize
+ggplot(combined_comparison, aes(x = reorder(Model, Mean_ROC), y = Mean_ROC, fill = Model)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  coord_flip() +
+  scale_y_continuous(limits = c(0, 1)) +
+  geom_text(aes(label = round(Mean_ROC, 3)), hjust = -0.2, size = 4) +
+  labs(title = "Model Comparison: Mean ROC (10-Fold CV)",
+       x = "Model", y = "Mean ROC") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+We conclude that RandomForest is the most accurate model!
