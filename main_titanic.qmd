@@ -373,65 +373,77 @@ ggplot(data_set, aes(x = GroupSize, fill = factor(survived))) +
 # WEEK 4: Baseline Modeling
 
 ```{r}
-# WEEK 4
+# WEEK 4: BASELINE MODELS
 
 library(caret)
+library(tidyverse)
 
 # DATA CLEANING
 titanic_clean <- na.omit(data_set)
 
-titanic_clean$survived <- as.factor(titanic_clean$survived)
-titanic_clean$sex <- as.factor(titanic_clean$sex)
-titanic_clean$pclass <- as.factor(titanic_clean$pclass)
+titanic_clean <- titanic_clean %>%
+  mutate(
+    survived = factor(survived),
+    sex = factor(sex),
+    pclass = factor(pclass)
+  )
 
-# SPLIT DATASET (70/30)
+# TRAIN / TEST SPLIT (70/30)
 set.seed(42)
 
 index <- createDataPartition(titanic_clean$survived, p = 0.70, list = FALSE)
-index <- as.vector(index) 
+index <- as.vector(index)
 
 train_set <- titanic_clean[index, ]
 test_set  <- titanic_clean[-index, ]
 
-# BUILD MODELS
-# Linear Regression (Predict Fare)
-lm_model <- lm(fare ~ pclass + sex + age + sib_sp + parch, data = train_set)
+# LINEAR REGRESSION (Regression Task → Predict Fare)
+lm_model <- lm(
+  fare ~ pclass + sex + age + sib_sp + parch,
+  data = train_set
+)
 
-# Logistic Regression (Predict Survival)
-log_model <- glm(survived ~ pclass + sex + age + sib_sp + parch,
-                 data = train_set, family = "binomial")
-
-# EVALUATE LINEAR MODEL
 lm_predictions <- predict(lm_model, test_set)
+
 lm_rmse <- RMSE(lm_predictions, test_set$fare)
 
-cat("Linear Regression RMSE:", lm_rmse, "\n")
+cat("\nLinear Regression Results\n")
+cat("RMSE:", lm_rmse, "\n")
 
-# EVALUATE LOGISTIC MODEL
+cat("\nLinear Regression Coefficients\n")
+print(summary(lm_model)$coefficients)
+
+# LOGISTIC REGRESSION (Classification → Predict Survival)
+log_model <- glm(
+  survived ~ pclass + sex + age + sib_sp + parch,
+  data = train_set,
+  family = binomial
+)
+
 log_probs <- predict(log_model, test_set, type = "response")
-log_preds <- ifelse(log_probs > 0.5, 1, 0)
 
-conf_matrix <- confusionMatrix(
-  as.factor(log_preds),
-  as.factor(test_set$survived),
+# Convert probabilities → classes
+log_preds <- ifelse(log_probs > 0.5, "1", "0")
+
+# Ensure same factor levels
+log_preds <- factor(log_preds, levels = levels(titanic_clean$survived))
+test_labels <- factor(test_set$survived, levels = levels(titanic_clean$survived))
+
+# Confusion Matrix
+conf_log <- confusionMatrix(
+  log_preds,
+  test_labels,
   positive = "1"
 )
 
-print(conf_matrix)
+cat("\nLogistic Regression Results\n")
+print(conf_log)
 
-cat("Accuracy:", conf_matrix$overall['Accuracy'], "\n")
-cat("Precision:", conf_matrix$byClass['Precision'], "\n")
-cat("Recall:", conf_matrix$byClass['Recall'], "\n")
+cat("\nAccuracy:", conf_log$overall["Accuracy"], "\n")
+cat("Precision:", conf_log$byClass["Precision"], "\n")
+cat("Recall:", conf_log$byClass["Recall"], "\n")
 
-# Safe output (no crash)
-cat("\nConfusion Matrix:\n")
-print(conf_matrix$table)
-
-# MODEL COEFFICIENTS
-cat("\n--- Linear Regression Coefficients ---\n")
-print(summary(lm_model)$coefficients)
-
-cat("\n--- Logistic Regression Coefficients ---\n")
+cat("\nLogistic Regression Coefficients\n")
 print(summary(log_model)$coefficients)
 ```
 
@@ -440,92 +452,45 @@ print(summary(log_model)$coefficients)
 Random Forest
 
 ```{r}
-library(randomForest)
-library(caret)
+set.seed(42)
 
-# ('train_set' and 'test_set' is needed from Week 4)
-# Ensure NAs are gone
-train_set <- na.omit(train_set)
-test_set <- na.omit(test_set)
+train_rf <- train_set
+test_rf  <- test_set
 
-# Build the Random Forest Model
-# We are predicting 'Survived' using the same features as before
-set.seed(42) # For consistent results
-rf_model <- randomForest(survived ~ pclass + sex + age + sib_sp + parch + fare, 
-                         data = train_set, 
-                         ntree = 500,        # Number of trees in the forest
-                         importance = TRUE)  # To see which variables matter most
+rf_model <- randomForest(
+  survived ~ pclass + sex + age + sib_sp + parch + fare,
+  data = train_rf,
+  ntree = 500,
+  importance = TRUE
+)
 
-# Model Summary
-print(rf_model)
+pred_rf <- predict(rf_model, test_rf)
 
-# Make Predictions on the Test Set
-rf_preds <- predict(rf_model, test_set)
-
-# Evaluate Performance
-# Accuracy, Precision, and Recall for Week 5
-rf_conf_matrix <- confusionMatrix(rf_preds, test_set$survived, positive = "1")
-print(rf_conf_matrix)
-
-# Check Variable Importance
-# This shows which features (like Sex or Age) were most important to the model
-varImpPlot(rf_model, main = "Variable Importance for Titanic Survival")
+conf_rf <- confusionMatrix(pred_rf, test_rf$survived, positive = "1")
+conf_rf
+conf_rf$overall["Accuracy"]
 ```
 
 Decision Tree
 
 ```{r}
-library(caret)
-library(rpart)
-
-#remove rows with missing variables and set factors
-dt_data <- data_set %>% 
-  drop_na(survived, pclass, sex, age, fare, FamilySize, IsAlone)
-
-dt_data$survived <- as.factor(dt_data$survived)
-dt_data$pclass <- as.factor(dt_data$pclass)
-dt_data$sex <- as.factor(dt_data$sex)
-
-#split dataset
-set.seed(42) # Ensures results are the same every time you run it
-train_index <- createDataPartition(dt_data$survived, p = 0.70, list = FALSE)
-
-#force matrix into a simple vector
-train_index_vec <- as.vector(train_index)
-
-train_set <- dt_data[train_index_vec, ]
-test_set <- dt_data[-train_index_vec, ]
-
-#decision tree
-#predict if a passenger lived (1) or died (0) using cross-validation and pruning
 set.seed(42)
+
+train_dt <- train_set
+test_dt  <- test_set
+
 dt_model <- train(
-  survived ~ pclass + sex + age + fare + FamilySize + IsAlone, 
-  data = train_set,
+  survived ~ pclass + sex + age + fare + FamilySize + IsAlone,
+  data = train_dt,
   method = "rpart",
-  trControl = trainControl("cv", number = 10),
-  tuneLength = 10 
+  trControl = trainControl(method = "cv", number = 10),
+  tuneLength = 10
 )
 
+pred_dt <- predict(dt_model, test_dt)
 
-#evaluate complexity parameter
-plot(dt_model)
-print(dt_model$bestTune)
-
-#evaluate accuracy
-dt_predictions <- predict(dt_model, newdata = test_set)
-test_accuracy <- mean(dt_predictions == test_set$survived)
-cat("Final Test Data Accuracy:", round(test_accuracy, 4), "\n")
-
-
-#view the graph
-par(xpd = NA) 
-
-plot(dt_model$finalModel, uniform = TRUE, margin = 0.1) 
-text(dt_model$finalModel, digits = 3, cex = 0.6) 
-
-#view the text representation of the decision rules
-print(dt_model$finalModel)
+test_accuracy_dt <- mean(pred_dt == test_dt$survived)
+test_accuracy_dt
 ```
 
 SVM
@@ -542,93 +507,53 @@ library(tidyverse)
 
 set.seed(123)
 
-#Clean data
+# Clean data
 data_set_clean <- data_set %>%
   select(-passenger_id, -name, -ticket) %>%
   drop_na() %>%
-  mutate(across(where(is.character), as.factor))
+  mutate(across(where(is.character), as.factor)) %>%
+  mutate(survived = factor(survived, levels = c(0, 1), labels = c("No", "Yes")))
 
-#Make the target a factor
-data_set_clean$survived <- factor(data_set_clean$survived, labels = c("Yes", "No"))
+# Train/Test split (SVM ONLY)
+train_index_svm <- createDataPartition(data_set_clean$survived, p = 0.8, list = FALSE)
+train_index_svm <- as.vector(train_index_svm)
 
-#Train/Test split
-train_data <- createDataPartition(data_set_clean$survived, p = 0.8, list = FALSE)
-train_data <- as.vector(train_data) 
+train_svm <- data_set_clean[train_index_svm, ]
+test_svm  <- data_set_clean[-train_index_svm, ]
 
-train <- data_set_clean[train_data, ]
-test  <- data_set_clean[-train_data, ]
+# Train Control
+ctrl <- trainControl(method = "cv", number = 5)
 
-#Train Control
-ctrl <- trainControl(
-  method = "cv",
-  number = 5
-)
-
+# Model
 svm_model <- train(
   survived ~ .,
-  data = train,
+  data = train_svm,
   method = "svmRadial",
   trControl = ctrl
 )
 
-#print(svm_model)
+# Predictions
+pred_svm <- predict(svm_model, test_svm)
 
-svm_pred <- predict(svm_model, test)
+# Evaluation
+conf_svm <- confusionMatrix(pred_svm, test_svm$survived)
 
-confusionMatrix(svm_pred, test$survived)
-confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
+conf_svm
+
+conf_svm$overall["Accuracy"]
 ```
 
 Gradient Boosting
 
 ```{r}
-library(tidyverse)
-library(tidymodels)
-library(xgboost)
+train_xgb <- train
+test_xgb  <- test
 
-data_clean <- data_set %>%
-  select(-passenger_id, -name, -ticket) %>%
-  drop_na() %>%
-  mutate(across(where(is.character), as.factor)) %>%
-  mutate(survived = factor(survived, levels = c(0,1), labels = c("No","Yes")))
+pred_xgb <- predict(fit, test_xgb) %>%
+  bind_cols(test_xgb)
 
-#train test split
-set.seed(123)
-
-split <- initial_split(data_clean, prop = 0.8, strata = survived)
-train <- training(split)
-test  <- testing(split)
-
-#preprocessing
-rec <- recipe(survived ~ ., data = train) %>%
-  step_dummy(all_nominal_predictors()) %>%
-  step_zv(all_predictors())
-
-#defining model
-xgb_model <- boost_tree(
-  mode = "classification",
-  trees = 150,
-  learn_rate = 0.3,
-  tree_depth = 2
-) %>%
-  set_engine("xgboost")
-
-#combining into workflow
-wf <- workflow() %>%
-  add_model(xgb_model) %>%
-  add_recipe(rec)
-
-#fitting model
-fit <- fit(wf, data = train)
-
-
-#predicting and evaluating
-preds <- predict(fit, test) %>%
-  bind_cols(test)
-
-conf_mat(preds, truth = survived, estimate = .pred_class)
-
-accuracy(preds, truth = survived, estimate = .pred_class)
+acc_xgb <- accuracy(pred_xgb, truth = survived, estimate = .pred_class)
+acc_xgb
 ```
 
 **Model Comparison:**
@@ -636,30 +561,20 @@ accuracy(preds, truth = survived, estimate = .pred_class)
 Performance Metrics
 
 ```{r}
-<<<<<<< HEAD
-=======
-
->>>>>>> 0d556c0e3383d07f2bd48c008752fb4be22bce45
-library(ggplot2)
-library(dplyr)
-
-#gather test accuracies 
-log_acc <- conf_matrix$overall['Accuracy']
-rf_acc <- rf_conf_matrix$overall['Accuracy']
-dt_acc <- test_accuracy # Created in the Decision Tree section
-svm_acc <- confusionMatrix(svm_pred, test$survived)$overall["Accuracy"]
-
-#create comparison table
 model_comparison <- data.frame(
-  Model = c("Logistic Regression (Baseline)", "Decision Tree", "Random Forest", "SVM"),
-  Accuracy = c(log_acc, dt_acc, rf_acc, svm_acc)
+  Model = c("Logistic Regression", "Decision Tree", "Random Forest", "SVM", "XGBoost"),
+  Accuracy = c(
+    conf_log$overall["Accuracy"],
+    test_accuracy_dt,
+    conf_rf$overall["Accuracy"],
+    conf_svm$overall["Accuracy"],
+    acc_xgb$.estimate
+  )
 )
 
-#sort from highest to lowest
 model_comparison <- model_comparison %>%
   arrange(desc(Accuracy))
 
-cat("\n--- Final Model Comparison Table ---\n")
 print(model_comparison)
 
 #visualize
@@ -675,4 +590,8 @@ ggplot(model_comparison, aes(x = reorder(Model, Accuracy), y = Accuracy, fill = 
   theme_minimal() +
   theme(legend.position = "none", 
         plot.title = element_text(face = "bold", size = 14))
+```
+
+```{r}
+
 ```
