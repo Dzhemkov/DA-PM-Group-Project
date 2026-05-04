@@ -14,48 +14,68 @@ execute:
   echo: false
   warning: false
   message: false
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
 # Introduction
 
-The sinking of the RMS Titanic in April 1912 remains one of the most well-documented maritime disasters in history. Of the 2,224 passengers and crew aboard, more than 1,500 perished. The tragedy revealed stark disparities in survival outcomes tied to factors such as passenger class, sex, age, and fare.
+The sinking of the RMS Titanic in April 1912 remains one of the most
+well-documented maritime disasters in history. Of the 2,224 passengers
+and crew aboard, more than 1,500 perished. The tragedy revealed stark
+disparities in survival outcomes tied to factors such as passenger
+class, sex, age, and fare.
 
-This project was completed by a six-member team consisting of Radu Demian, Jacob Foote, Lui Fuata, Greg Lampert, David Reese, and Dmitriy Zhemkov (Team Leader). Collaboration was managed through GitHub and Discord, where the project repository and Quarto document were initialized.
+This project was completed by a six-member team consisting of Radu
+Demian, Jacob Foote, Lui Fuata, Greg Lampert, David Reese, and Dmitriy
+Zhemkov (Team Leader). Collaboration was managed through GitHub and
+Discord, where the project repository and Quarto document were
+initialized.
 
-The dataset selected is the Titanic passenger dataset sourced from Kaggle, containing records for 891 passengers across 12 variables including demographics, socioeconomic status, family composition, embarkation port, and survival status.
+The dataset selected is the Titanic passenger dataset sourced from
+Kaggle, containing records for 891 passengers across 12 variables
+including demographics, socioeconomic status, family composition,
+embarkation port, and survival status.
 
 ## Objectives
 
 The specific objectives of this project are:
 
--   Understand the structure and characteristics of the Titanic dataset
--   Clean and prepare the data for analysis
--   Explore patterns and relationships through visualizations and statistical summaries
--   Engineer new features to improve predictive power
--   Build and evaluate multiple classification models
--   Compare model performance and identify the best predictor of survival
--   Translate findings into meaningful real-world insights
+- Understand the structure and characteristics of the Titanic dataset
+- Clean and prepare the data for analysis
+- Explore patterns and relationships through visualizations and
+  statistical summaries
+- Engineer new features to improve predictive power
+- Build and evaluate multiple classification models
+- Compare model performance and identify the best predictor of survival
+- Translate findings into meaningful real-world insights
 
 ### Problem Statement
-The central question driving this analysis is: What factors most influenced whether a passenger survived the Titanic disaster?
+
+The central question driving this analysis is: What factors most
+influenced whether a passenger survived the Titanic disaster?
 
 Specifically, this analysis addresses the following questions:
 
 - How did passenger class affect survival?
-- Did traveling with family improve survival compared to traveling alone?
+- Did traveling with family improve survival compared to traveling
+  alone?
 - Did passengers who paid higher fares have better survival odds?
 - Which combination of attributes best predicts survival?
 - Can we build a model that predicts survival with meaningful accuracy?
-# Dataset Overview
+  \# Dataset Overview
 
-The dataset used in this analysis is the Titanic passenger dataset obtained from Kaggle. It contains 891 rows and 12 columns, where each row represents a single passenger.
+The dataset used in this analysis is the Titanic passenger dataset
+obtained from Kaggle. It contains 891 rows and 12 columns, where each
+row represents a single passenger.
 
 ## Variables
 
 The following variables are included in the dataset:
 
 | Variable | Type | Description |
-|------------------------|-----------------|-------------------------------|
+|------------------------|------------------|------------------------------|
 | PassengerId | Numeric | Unique identifier for each passenger |
 | Survived | Numeric | Survival status (0 = Died, 1 = Survived) |
 | Pclass | Numeric | Passenger class (1 = First, 2 = Second, 3 = Third) |
@@ -71,22 +91,26 @@ The following variables are included in the dataset:
 
 ## Data Quality
 
-Initial inspection revealed the following data quality issues that were addressed during cleaning:
+Initial inspection revealed the following data quality issues that were
+addressed during cleaning:
 
--   **Age** contained 177 missing values and was imputed using the median
--   **Cabin** contained 687 missing values — the deck letter was extracted where available and the rest labeled as Unknown
--   **Embarked** contained 2 missing values
--   No duplicate records were found in the dataset
+- **Age** contained 177 missing values and was imputed using the median
+- **Cabin** contained 687 missing values — the deck letter was extracted
+  where available and the rest labeled as Unknown
+- **Embarked** contained 2 missing values
+- No duplicate records were found in the dataset
 
 # Methodology
 
 ## Week 1 — Data Preparation and Cleaning
 
-The dataset contains passenger information from the RMS Titanic sinking, including variables 
-such as survival status, passenger class, sex, age, and fare. There are several missing values 
-in the age, cabin, and embarked columns, but no duplicate records were found.
+The dataset contains passenger information from the RMS Titanic sinking,
+including variables such as survival status, passenger class, sex, age,
+and fare. There are several missing values in the age, cabin, and
+embarked columns, but no duplicate records were found.
 
-We will use the data to analyze the factors that affected survival status among the passengers.
+We will use the data to analyze the factors that affected survival
+status among the passengers.
 
 survived (0 = No, 1 = Yes)
 
@@ -94,80 +118,212 @@ Key Predictors: pclass, sex, age, sib_sp, parch, fare, embarked
 
 There are a lot of missing values in this dataset. No duplicates.
 
-The summary statistics show that age is spread across a wide range, indicating a diverse group 
-of passengers. Fare is highly skewed, with most passengers paying lower amounts and a small 
-number paying very high prices. The survival variable is imbalanced, more passengers died than 
-survived. Because of the skewness in fare, it may need to be adjusted or capped for better analysis.
+The summary statistics show that age is spread across a wide range,
+indicating a diverse group of passengers. Fare is highly skewed, with
+most passengers paying lower amounts and a small number paying very high
+prices. The survival variable is imbalanced, more passengers died than
+survived. Because of the skewness in fare, it may need to be adjusted or
+capped for better analysis.
 
-The age distribution appears slightly skewed. Fare is heavily right-skewed, confirming the 
-presence of outliers. Most passengers traveled with few or no family members, as shown by the 
-sib_sp and parch distributions. The survival count shows that more passengers died than survived. 
-The majority of passengers were in 3rd class, and there were more males than females on board. 
-Most passengers embarked from Southampton. These distributions suggest that class, sex, and fare 
-may be important factors in survival.
+The age distribution appears slightly skewed. Fare is heavily
+right-skewed, confirming the presence of outliers. Most passengers
+traveled with few or no family members, as shown by the sib_sp and parch
+distributions. The survival count shows that more passengers died than
+survived. The majority of passengers were in 3rd class, and there were
+more males than females on board. Most passengers embarked from
+Southampton. These distributions suggest that class, sex, and fare may
+be important factors in survival.
 
-The boxplots show that passengers who survived generally paid higher fares compared to those who 
-did not survive. The fare variable contains extreme outliers, which can distort analysis.
+The boxplots show that passengers who survived generally paid higher
+fares compared to those who did not survive. The fare variable contains
+extreme outliers, which can distort analysis.
 
-After capping fare at the 99th percentile, the distribution becomes more stable while still 
-keeping most of the data, making further analysis more reliable.
+After capping fare at the 99th percentile, the distribution becomes more
+stable while still keeping most of the data, making further analysis
+more reliable.
 
 ## Weeks 2–3 — Exploratory Data Analysis and Feature Engineering
 
-The univariate analysis shows how each variable is distributed on its own. Age is somewhat 
-normally distributed but slightly skewed, indicating a mix of younger and older passengers. 
-Fare is heavily right-skewed, with most passengers paying low amounts and a few paying very 
-high prices, which confirms the presence of outliers. The survival distribution shows that more 
-passengers died than survived, so the outcome is imbalanced. Passenger class distribution shows 
-that most people were in 3rd class, while fewer were in 1st and 2nd class. The sex distribution 
-shows that there were more males than females on board.
+The univariate analysis shows how each variable is distributed on its
+own. Age is somewhat normally distributed but slightly skewed,
+indicating a mix of younger and older passengers. Fare is heavily
+right-skewed, with most passengers paying low amounts and a few paying
+very high prices, which confirms the presence of outliers. The survival
+distribution shows that more passengers died than survived, so the
+outcome is imbalanced. Passenger class distribution shows that most
+people were in 3rd class, while fewer were in 1st and 2nd class. The sex
+distribution shows that there were more males than females on board.
 
-The correlation analysis shows a negative relationship between passenger class and fare, meaning 
-higher-class passengers paid more. There is also a negative relationship between passenger class 
-and survival, indicating that higher-class passengers were more likely to survive. Most other 
-relationships are weak, suggesting that survival is influenced by multiple variables rather than 
-a single strong factor.
+The correlation analysis shows a negative relationship between passenger
+class and fare, meaning higher-class passengers paid more. There is also
+a negative relationship between passenger class and survival, indicating
+that higher-class passengers were more likely to survive. Most other
+relationships are weak, suggesting that survival is influenced by
+multiple variables rather than a single strong factor.
 
-The scatter plots show that passengers who paid higher fares were more likely to survive. 
-Lower-class passengers had lower survival rates, reinforcing the importance of socioeconomic 
-status. Age does not show a strong or clear relationship with survival, other than the fact that 
-if you were in a lower class you were more likely to survive if you were younger. Overall, fare 
-and class appear to be more important predictors than age.
+The scatter plots show that passengers who paid higher fares were more
+likely to survive. Lower-class passengers had lower survival rates,
+reinforcing the importance of socioeconomic status. Age does not show a
+strong or clear relationship with survival, other than the fact that if
+you were in a lower class you were more likely to survive if you were
+younger. Overall, fare and class appear to be more important predictors
+than age.
 
-The group comparisons show clear differences in survival rates. Females had a much higher 
-survival rate than males, and passengers in higher classes were more likely to survive than those 
-in lower classes. Fare also varies significantly by class, with higher-class passengers paying 
-more. These patterns suggest that both gender and socioeconomic status played a major role in 
-determining survival.
+The group comparisons show clear differences in survival rates. Females
+had a much higher survival rate than males, and passengers in higher
+classes were more likely to survive than those in lower classes. Fare
+also varies significantly by class, with higher-class passengers paying
+more. These patterns suggest that both gender and socioeconomic status
+played a major role in determining survival.
 
-Several new variables were created to better capture passenger characteristics. FamilySize 
-represents the total number of family members aboard, while IsAlone indicates whether a passenger 
-was traveling alone. Deck was extracted from the cabin information, even though a lot of values 
-were missing and labeled as unknown. GroupSize shows how many passengers shared the same ticket, 
-and FareBin categorizes fares into levels. The cutoffs at 8, 15, and 31 roughly separate 
-low-cost tickets from mid-range, higher, and very expensive fares based on how the data is 
-distributed. Since fare is heavily right-skewed, most values are concentrated at the lower end, 
-so smaller intervals are used there, while a larger range captures the high-end outliers. These 
-new features provide more structure to the data and may improve future analysis.
+Several new variables were created to better capture passenger
+characteristics. FamilySize represents the total number of family
+members aboard, while IsAlone indicates whether a passenger was
+traveling alone. Deck was extracted from the cabin information, even
+though a lot of values were missing and labeled as unknown. GroupSize
+shows how many passengers shared the same ticket, and FareBin
+categorizes fares into levels. The cutoffs at 8, 15, and 31 roughly
+separate low-cost tickets from mid-range, higher, and very expensive
+fares based on how the data is distributed. Since fare is heavily
+right-skewed, most values are concentrated at the lower end, so smaller
+intervals are used there, while a larger range captures the high-end
+outliers. These new features provide more structure to the data and may
+improve future analysis.
 
-These visualizations help confirm that the engineered features and fare bins capture meaningful 
-patterns in the data. The fare distribution with cutoffs shows that most values are concentrated 
-in the lower ranges, which justifies the bin choices. The survival-by-bin plot shows clear 
-differences across fare levels, supporting the idea that fare is linked to survival. Similarly, 
-features like FamilySize, IsAlone, Deck, and GroupSize reveal patterns that are not obvious in 
-the raw data, making them useful for further analysis.
+These visualizations help confirm that the engineered features and fare
+bins capture meaningful patterns in the data. The fare distribution with
+cutoffs shows that most values are concentrated in the lower ranges,
+which justifies the bin choices. The survival-by-bin plot shows clear
+differences across fare levels, supporting the idea that fare is linked
+to survival. Similarly, features like FamilySize, IsAlone, Deck, and
+GroupSize reveal patterns that are not obvious in the raw data, making
+them useful for further analysis.
 
 ## Week 4 — Baseline Modeling
 
-Two baseline models were built: a linear regression model to predict fare, and a logistic 
-regression model to predict survival. The dataset was split 70% training and 30% test.
+Two baseline models were built: a linear regression model to predict
+fare, and a logistic regression model to predict survival. The dataset
+was split 70% training and 30% test.
 
 ## Week 5 — Advanced Modeling
 
-The SVM model achieved 71.83% accuracy. It is better at predicting non-survivors 
-(Sensitivity = 0.7857) than survivors (Specificity = 0.627). The confusion matrix shows that 
-this model is better at predicting survivors and worse at predicting non-survivors.
+The SVM model used an 80/20 train/test split with 5-fold
+cross-validation and achieved 71.83% accuracy. It is better at
+predicting non-survivors (Sensitivity = 0.7857) than survivors
+(Specificity = 0.627). A Gradient Boosting model was implemented using
+XGBoost via the tidymodels framework, achieving 78.97% accuracy. \#
+Results and Findings
 
-Sensitivity = TP / (TP + FN)
+## Week 1 — Data Preparation
 
-Specificity = TN / (TN + FP)
+The dataset contains 891 rows and 12 columns. Missing values were found
+in three columns: Age (177 missing), Cabin (687 missing), and Embarked
+(2 missing). No duplicate records were found. Fare was capped at the
+99th percentile to handle extreme outliers.
+
+## Weeks 2–3 — Exploratory Data Analysis
+
+Univariate analysis confirmed that fare is heavily right-skewed and that
+more passengers died than survived. The majority of passengers were in
+3rd class, and there were more males than females on board.
+
+Bivariate analysis revealed the following key patterns:
+
+- Females had a significantly higher survival rate than males
+- First-class passengers survived at higher rates than second and third
+  class
+- Passengers who paid higher fares were more likely to survive
+- Age showed no strong relationship with survival on its own
+
+## Week 4 — Baseline Model Results
+
+The linear regression model predicting fare produced an RMSE of 42.44,
+indicating moderate prediction error given the wide range and skewness
+of fare values.
+
+The logistic regression model predicting survival achieved the following
+on the test set:
+
+| Metric    | Value  |
+|-----------|--------|
+| Accuracy  | 80.84% |
+| Precision | 79.49% |
+| Recall    | 71.26% |
+
+## Week 5 — Advanced Model Results
+
+Three additional models were evaluated on the test set:
+
+| Model         | Accuracy |
+|---------------|----------|
+| Decision Tree | 83.64%   |
+| Random Forest | 81.78%   |
+| SVM           | 71.83%   |
+| XGBoost       | 78.97%   |
+
+## Week 6 — Final Model Comparison
+
+All five models were compared by accuracy on the test set. The final
+rankings were:
+
+| Rank | Model               | Accuracy |
+|------|---------------------|----------|
+| 1    | Decision Tree       | 83.64%   |
+| 2    | Random Forest       | 81.78%   |
+| 3    | Logistic Regression | 80.84%   |
+| 4    | XGBoost             | 78.97%   |
+| 5    | SVM                 | 71.83%   |
+
+The Decision Tree achieved the highest accuracy at 83.64%, with Random
+Forest close behind at 81.78%. \# Conclusions and Business Insights \#
+Conclusions and Business Insights
+
+## Key Findings
+
+The analysis identified several factors that strongly influenced
+survival on the Titanic:
+
+- **Sex** was the strongest predictor of survival. Females survived at a
+  much higher rate than males, consistent with the "women and children
+  first" evacuation policy.
+- **Passenger class** had a significant impact. First-class passengers
+  were more likely to survive than second and third class passengers,
+  reflecting the role of socioeconomic status.
+- **Fare** was positively associated with survival. Passengers who paid
+  higher fares, largely those in first class, had better survival odds.
+- **Age** did not show a strong individual relationship with survival,
+  though younger passengers in lower classes had slightly better odds.
+- **Traveling alone** was associated with lower survival rates compared
+  to traveling with family.
+
+## Model Performance
+
+The Decision Tree achieved the highest test accuracy at 83.64%, followed
+closely by Random Forest at 81.78%. While the Decision Tree performed
+best on this dataset, Random Forest is generally considered more robust
+due to its resistance to overfitting. Logistic Regression performed
+competitively at 80.84% while remaining the most interpretable model.
+SVM performed the weakest at 71.83%.
+
+## Business Insights
+
+These findings have real-world implications beyond historical analysis:
+
+- Socioeconomic status and resource access play a critical role in
+  emergency outcomes. This pattern is observable in modern disaster
+  response scenarios where evacuation prioritization and resource
+  allocation can determine survival.
+- Predictive modeling can be applied to emergency planning to identify
+  at-risk populations and improve evacuation protocols.
+- The strong performance of tree-based models suggests that survival
+  outcomes follow clear decision rules based on a small number of key
+  variables, particularly sex, class, and fare.
+
+## Limitations
+
+- The dataset contains 177 missing age values, which were removed during
+  cleaning and may have introduced bias.
+- The cabin variable had 687 missing values, limiting the usefulness of
+  the Deck feature.
+- Models were trained on a relatively small dataset of 891 passengers,
+  which may limit generalizability.
