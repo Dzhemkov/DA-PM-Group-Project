@@ -398,7 +398,7 @@ test_set  <- titanic_clean[-index, ]
 lm_model <- lm(fare ~ pclass + sex + age + sib_sp + parch, data = train_set)
 
 # Logistic Regression (Predict Survival)
-log_model <- glm(survived ~ pclass + sex + age + sib_sp + parch,
+log_model <- glm(survived ~ pclass + sex + age + sib_sp + parch + IsAlone + FareBin + GroupSize + FamilySize,
                  data = train_set, family = "binomial")
 
 # EVALUATE LINEAR MODEL
@@ -433,6 +433,100 @@ print(summary(lm_model)$coefficients)
 
 cat("\n--- Logistic Regression Coefficients ---\n")
 print(summary(log_model)$coefficients)
+```
+
+```{r}
+# ---- VARIABLE SIGNIFICANCE TESTING ----
+
+library(broom)
+
+# Ensure correct types
+titanic_sig <- titanic_clean %>%
+  mutate(
+    survived  = as.factor(survived),
+    sex       = as.factor(sex),
+    pclass    = as.factor(pclass),
+    embarked  = as.factor(embarked)
+  ) %>%
+  drop_na(survived, pclass, sex, age, fare, sib_sp, parch, FamilySize, IsAlone)
+
+# Fit logistic regression with all candidate predictors
+sig_model <- glm(
+  survived ~ pclass + sex + age + fare + sib_sp + parch + FamilySize + IsAlone + embarked,
+  data   = titanic_sig,
+  family = "binomial"
+)
+
+# Tidy output with p-values
+sig_results <- tidy(sig_model) %>%
+  arrange(p.value) %>%
+  mutate(
+    significant = ifelse(p.value < 0.05, "Yes", "No"),
+    p.value     = round(p.value, 4),
+    estimate    = round(estimate, 4)
+  )
+
+print(sig_results)
+
+# Visualize — coefficient plot
+ggplot(sig_results %>% filter(term != "(Intercept)"),
+       aes(x = reorder(term, estimate), y = estimate, fill = significant)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  coord_flip() +
+  scale_fill_manual(values = c("Yes" = "steelblue", "No" = "tomato")) +
+  labs(
+    title = "Variable Significance for Survival Prediction",
+    x     = "Variable",
+    y     = "Coefficient Estimate",
+    fill  = "Significant (p < 0.05)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Chi-square tests for categorical predictors
+chisq_sex      <- chisq.test(table(titanic_sig$survived, titanic_sig$sex))
+chisq_pclass   <- chisq.test(table(titanic_sig$survived, titanic_sig$pclass))
+chisq_embarked <- chisq.test(table(titanic_sig$survived, titanic_sig$embarked))
+chisq_isalone  <- chisq.test(table(titanic_sig$survived, titanic_sig$IsAlone))
+
+cat("Sex p-value:      ", chisq_sex$p.value, "\n")
+cat("Pclass p-value:   ", chisq_pclass$p.value, "\n")
+cat("Embarked p-value: ", chisq_embarked$p.value, "\n")
+cat("IsAlone p-value:  ", chisq_isalone$p.value, "\n")
+```
+
+```{r}
+# ---- STEPWISE REGRESSION ----
+
+library(MASS)  # for stepAIC
+
+# Base full model with all candidate predictors
+full_model <- glm(
+  survived ~ pclass + sex + age + fare + sib_sp + parch + FamilySize + IsAlone + embarked,
+  data   = titanic_sig,
+  family = "binomial"
+)
+
+# Null model (intercept only — no predictors)
+null_model <- glm(
+  survived ~ 1,
+  data   = titanic_sig,
+  family = "binomial"
+)
+
+
+# combines forward and backward at each step (most thorough)
+both_model <- stepAIC(full_model, direction = "both", trace = TRUE)
+
+
+cat("\n--- Both Direction Final Variables ---\n")
+print(summary(both_model)$coefficients)
+
+# ---- COMPARE AIC SCORES ----
+# Lower AIC = better model (penalizes complexity)
+cat("\n--- AIC Comparison ---\n")
+cat("Both model AIC:      ", AIC(both_model), "\n")
 ```
 
 # WEEK 5: Model Evaluation and Refinement
