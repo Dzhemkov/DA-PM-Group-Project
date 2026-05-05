@@ -303,7 +303,7 @@ data_set$GroupSize <- ticket_counts[data_set$ticket]
 
 data_set$FareBin <- cut(data_set$fare, breaks=c(-Inf, 8, 15, 31, Inf), labels=c("Low", "Mid", "High", "Luxury"))
 
-view(data_set)
+#view(data_set)
 
 # Bivariate Plot: Survival by FamilySize
 #ggplot(data_set, aes(x = FamilySize, fill = factor(Survived))) +
@@ -311,6 +311,15 @@ view(data_set)
 #  labs(y = "Survival Rate", title = "Survival Rate by Family Size") +
 #  theme_minimal()
 
+data_set$FareBin <- factor(data_set$FareBin)
+data_set$Deck <- factor(data_set$Deck)
+data_set$IsAlone <- factor(data_set$IsAlone)
+
+model_sig <- glm(survived ~ FareBin + FamilySize + IsAlone + Deck + GroupSize, 
+                 data = data_set, 
+                 family = binomial)
+
+summary(model_sig)
 ```
 
 New columns vs. Survival
@@ -548,11 +557,11 @@ conf_svm$overall["Accuracy"]
 
 Gradient Boosting
 
+This model did better than the SVM model with an accuracy of 79%.
+
 ```{r}
 library(tidymodels)
 
-# 1. Define the XGBoost model specification
-# Note: changed 'learning_rate' to 'learn_rate'
 xgb_spec <- boost_tree(
   trees = 100, 
   tree_depth = 3, 
@@ -561,19 +570,15 @@ xgb_spec <- boost_tree(
   set_engine("xgboost") %>% 
   set_mode("classification")
 
-# 2. Define the workflow
 xgb_workflow <- workflow() %>%
   add_formula(survived ~ pclass + sex + age + sib_sp + parch + fare) %>%
   add_model(xgb_spec)
 
-# 3. Train the model using the train_set from your Week 4 code
 fit_xgb <- fit(xgb_workflow, data = train_set)
 
-# 4. Predict on test_set
 pred_xgb <- predict(fit_xgb, test_set) %>%
   bind_cols(test_set)
 
-# 5. Calculate Accuracy
 acc_xgb <- accuracy(pred_xgb, truth = survived, estimate = .pred_class)
 print(acc_xgb)
 ```
@@ -697,4 +702,4 @@ diff_results <- diff(results)
 summary(diff_results)
 ```
 
-We conclude that RandomForest is the most accurate model!
+We conclude that RandomForest is the most accurate model.
