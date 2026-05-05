@@ -470,7 +470,7 @@ train_rf <- train_set
 test_rf  <- test_set
 
 rf_model <- randomForest(
-  survived ~ pclass + sex + age + sib_sp + parch + fare,
+  survived ~ pclass + sex + age + sib_sp + parch + fare + FareBin + FamilySize + IsAlone + Deck,
   data = train_rf,
   ntree = 500,
   importance = TRUE
@@ -492,7 +492,7 @@ train_dt <- train_set
 test_dt  <- test_set
 
 dt_model <- train(
-  survived ~ pclass + sex + age + fare + FamilySize + IsAlone,
+  survived ~ pclass + sex + age + fare + FareBin + FamilySize + IsAlone + Deck,
   data = train_dt,
   method = "rpart",
   trControl = trainControl(method = "cv", number = 10),
@@ -569,9 +569,9 @@ xgb_spec <- boost_tree(
 ) %>% 
   set_engine("xgboost") %>% 
   set_mode("classification")
-
+    
 xgb_workflow <- workflow() %>%
-  add_formula(survived ~ pclass + sex + age + sib_sp + parch + fare) %>%
+  add_formula(survived ~ pclass + sex + age + sib_sp + parch + fare + FareBin + FamilySize + IsAlone + Deck) %>%
   add_model(xgb_spec)
 
 fit_xgb <- fit(xgb_workflow, data = train_set)
@@ -703,3 +703,40 @@ summary(diff_results)
 ```
 
 We conclude that RandomForest is the most accurate model.
+
+Week 6: Model Evaluation & Refinement
+
+```{r}
+tune_grid <- expand.grid(.mtry = c(2, 3, 4, 5, 8))
+
+set.seed(42)
+final_rf_model <- train(
+  survived ~ pclass + sex + age + sib_sp + parch + fare + FareBin + FamilySize + IsAlone,
+  data = titanic_cv,
+  method = "rf",
+  metric = "ROC",
+  tuneGrid = tune_grid,
+  trControl = cv_control,
+  ntree = 1000,
+  importance = TRUE
+)
+
+final_rf_model$bestTune
+```
+
+```{r}
+final_preds <- predict(final_rf_model, titanic_cv)
+conf_matrix_final <- confusionMatrix(final_preds, titanic_cv$survived)
+
+conf_matrix_final
+```
+
+```{r}
+library(pROC)
+
+rf_probs <- predict(final_rf_model, titanic_cv, type = "prob")
+roc_curve <- roc(titanic_cv$survived, rf_probs$Yes)
+
+plot(roc_curve, col = "royalblue", lwd = 3, main = "ROC Curve: Tuned Random Forest")
+text(0.5, 0.5, paste("AUC =", round(auc(roc_curve), 3)))
+```
