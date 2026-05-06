@@ -4,7 +4,6 @@ subtitle: "CIS 435 – Data Analytics Final Report"
 author: 
   - "Radu Demian" 
   - "Dmitriy Zhemkov" 
-  - "Jacob Foote"
   - "Lui Fuata"
   - "Greg Lampert"
   - "David Reese"
@@ -75,7 +74,7 @@ row represents a single passenger.
 The following variables are included in the dataset:
 
 | Variable | Type | Description |
-|------------------------|------------------|------------------------------|
+|------------------------|-------------------|------------------------------|
 | PassengerId | Numeric | Unique identifier for each passenger |
 | Survived | Numeric | Survival status (0 = Died, 1 = Survived) |
 | Pclass | Numeric | Passenger class (1 = First, 2 = Second, 3 = Third) |
@@ -214,6 +213,17 @@ predicting non-survivors (Sensitivity = 0.7857) than survivors
 XGBoost via the tidymodels framework, achieving 78.97% accuracy. \#
 Results and Findings
 
+## Week 6 — Model Evaluation and Refinement
+
+A shared 10-fold cross-validation framework was applied across all
+models using ROC-AUC as the evaluation metric. The Random Forest model
+was then tuned using a grid search across mtry values of 2, 3, 4, 5,
+and 8, with 1,000 trees and an expanded feature set including FareBin,
+FamilySize, and IsAlone. An ROC curve was generated for the final tuned
+model. We conclude that RandomForest is the most accurate model.
+
+# Results and Findings
+
 ## Week 1 — Data Preparation
 
 The dataset contains 891 rows and 12 columns. Missing values were found
@@ -230,8 +240,7 @@ more passengers died than survived. The majority of passengers were in
 Bivariate analysis revealed the following key patterns:
 
 - Females had a significantly higher survival rate than males
-- First-class passengers survived at higher rates than second and third
-  class
+- First-class passengers survived at higher rates than second and third class
 - Passengers who paid higher fares were more likely to survive
 - Age showed no strong relationship with survival on its own
 
@@ -252,14 +261,14 @@ on the test set:
 
 ## Week 5 — Advanced Model Results
 
-Three additional models were evaluated on the test set:
+Four additional models were evaluated on the test set:
 
 | Model         | Accuracy |
 |---------------|----------|
 | Decision Tree | 83.64%   |
 | Random Forest | 81.78%   |
-| SVM           | 71.83%   |
 | XGBoost       | 78.97%   |
+| SVM           | 71.83%   |
 
 ## Week 6 — Final Model Comparison
 
@@ -274,9 +283,10 @@ rankings were:
 | 4    | XGBoost             | 78.97%   |
 | 5    | SVM                 | 71.83%   |
 
-The Decision Tree achieved the highest accuracy at 83.64%, with Random
-Forest close behind at 81.78%. \# Conclusions and Business Insights \#
-Conclusions and Business Insights
+A unified 10-fold cross-validation comparison using ROC-AUC confirmed
+Random Forest as the strongest overall model across folds. 
+
+#Conclusions and Business Insights 
 
 ## Key Findings
 
